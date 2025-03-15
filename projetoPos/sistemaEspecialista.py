@@ -4,12 +4,14 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import tkinter as tk
 from tkinter import messagebox
+import matplotlib.pyplot as plt  # Importação para plotar gráficos
 
-#------------ Função de ativação Swish -------------------------------------
+#------------ Função de ativação Swish -------------------------------------#
+
 def swish(x):
     return x * keras.activations.sigmoid(x)
 
-# Função para gerar dados de treinamento
+#------------ Função para gerar dados de treinamento --------------------------#
 def train_datas(numbers):
     X = []
     y = []
@@ -31,6 +33,8 @@ def train_datas(numbers):
         number2 = number2 / 100
         result = result / (100 * 100)
         
+
+#------------Transforma as operações em one-hot-----------------------#
         operation_one_hot = [0, 0, 0, 0]
         operation_one_hot[operations] = 1 
 
@@ -39,38 +43,53 @@ def train_datas(numbers):
 
     return np.array(X), np.array(y)
 
-# Gerar dados
+# ----------------------Gerar dados--------------------------------------#
 X, y = train_datas(100000)
 
-# Dividir os dados em treino e teste
+# --------------Dividir os dados em treino e teste----------------------#
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Normalizar os dados
+#------------------Normalizar os dados----------------------------------#
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
 
-# Construir o modelo
+#-----------------------modelo------------------------------------------#
 model = keras.models.Sequential([
     keras.layers.Dense(64, input_shape=(6,), activation=swish),
     keras.layers.Dense(32, activation=swish),
     keras.layers.Dense(1)
 ])
 
-# Compilar o modelo
+#----------------Compilação---------------------------------------------#
 model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001), loss='mse')
 
-# Treinar o modelo
-model.fit(X_train, y_train, epochs=100, batch_size=64, verbose=1, validation_data=(X_test, y_test))
+#-Treinar o modelo e armazenar o histórico dividindo em 64 conjuntos por treino com 50 épocas-#
+history = model.fit(X_train, y_train, epochs=50, batch_size=64, verbose=1, validation_data=(X_test, y_test))
 
-# Função para verificar a resposta do usuário
+#---------visualizar o desempenho do treinamento-----------------------#
+def visualizarDesempenho(history):
+    plt.figure(figsize=(10, 6))
+    plt.plot(history.history['loss'], label='Treino')  # Perda no treino
+    plt.plot(history.history['val_loss'], label='Validação')  # Perda na validação
+    plt.title('Desempenho do Treinamento')
+    plt.xlabel('Épocas')
+    plt.ylabel('Perda (MSE)')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+#------------ Visualizar o desempenho do treinamento---------------------#
+visualizarDesempenho(history)
+
+#------------- Verificar a resposta do usuário----------------------------#
 def sistema_especialista(resposta_correta, resposta_estudante, tolerancia=0.01):
     if abs(resposta_estudante - resposta_correta) <= tolerancia:
         return True, "Parabéns! Resposta correta."
     else:
         return False, f"Resposta incorreta: {resposta_estudante:.2f}. A resposta correta é {resposta_correta:.2f}. Tente novamente!"
 
-# Variáveis globais
+#---------------------Variáveis globais----------------------------------------#
 resultado_real_global = 0
 contador_problemas = 0
 respostas_corretas = 0
@@ -83,7 +102,7 @@ operacoes = {
 }
 operacao_nome_global = ""  # Variável global para armazenar a operação atual
 
-# Função para gerar um problema e verificar a resposta
+#-----------Função para gerar um problema e verificar a resposta---------------#
 def gerar_problema():
     global contador_problemas, respostas_corretas, resultado_real_global, dificuldade, operacao_nome_global
 
@@ -96,37 +115,37 @@ def gerar_problema():
             operacoes[operacao]["tentativas"] = 0
         return
 
-    # Gerar um problema aleatório
+#------------------Geração de problema aleatório-------------------------------#
     if dificuldade == 1:
         num1 = np.random.randint(1, 50)
         num2 = np.random.randint(1, 50)
     elif dificuldade == 2:
-        num1 = np.random.randint(-50, 100)
-        num2 = np.random.randint(-50, 100)
+        num1 = np.random.randint(-50, 1000)
+        num2 = np.random.randint(-50, 1000)
     elif dificuldade == 3:
-        num1 = np.random.randint(-100, 100)
-        num2 = np.random.randint(-100, 100)
+        num1 = np.random.randint(-100, 1000)
+        num2 = np.random.randint(-100, 1000)
 
     operacao = np.random.randint(0, 4)
 
-    # Normalizar os números de entrada como no treinamento
+#-------Normalizar os números de entrada como no treinamento-------------------#
     num1_norm = num1 / 100
     num2_norm = num2 / 100
 
-    # Criar a representação One-Hot da operação
+#---------Criar a representação One-Hot da operação-----------------------#
     operation_one_hot = [0, 0, 0, 0]
     operation_one_hot[operacao] = 1  
 
-    # Criar a entrada do modelo
+#-----------------------Criar a entrada do modelo-----------------------#
     entrada = np.array([[num1_norm, num2_norm] + operation_one_hot])
 
-    # Normalizar a entrada com o mesmo scaler usado no treinamento
+#----Normalizar a entrada com o mesmo scaler usado no treinamento-------#
     entrada = scaler.transform(entrada)
 
-    # Fazer a previsão com a rede neural
-    resultado_predito = model.predict(entrada)[0][0] * (100 * 100)
+#--------------Fazer a previsão com a rede neural-----------------------#
+    model.predict(entrada)[0][0] * (100 * 100)
 
-    # Calcular o resultado real
+#-------------------Calcular o resultado real---------------------------#
     if operacao == 0:
         resultado_real = num1 + num2
         simbolo = "+"
@@ -144,13 +163,13 @@ def gerar_problema():
         simbolo = "÷"
         operacao_nome_global = "divisão"
 
-    # Atualizar a interface com o problema
+#------------Atualizar a interface com o problema-----------------------#
     problema_label.config(text=f"Quanto é {num1} {simbolo} {num2}?")
     resultado_real_global = resultado_real
     contador_problemas += 1
     operacoes[operacao_nome_global]["tentativas"] += 1
 
-# Função para verificar a resposta do usuário
+#--------- Função para verificar a resposta do usuário----------------------#
 def verificar_resposta():
     global respostas_corretas, operacao_nome_global
     try:
@@ -164,7 +183,7 @@ def verificar_resposta():
     except ValueError:
         messagebox.showerror("Erro", "Por favor, insira um número válido.")
 
-# Função para mostrar o desempenho final
+#--------------Função para mostrar o desempenho final-----------------------#
 def mostrar_desempenho():
     desempenho = "Desempenho Final:\n"
     for operacao, dados in operacoes.items():
@@ -177,7 +196,7 @@ def mostrar_desempenho():
             desempenho += f"{operacao.capitalize()}: Nenhuma tentativa\n"
     messagebox.showinfo("Desempenho", desempenho)
 
-# Função para escolher a dificuldade
+#----------------------- dificuldade----------------------------#
 def escolher_dificuldade(nova_dificuldade):
     global dificuldade
     dificuldade = nova_dificuldade
